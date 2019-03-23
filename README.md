@@ -62,19 +62,21 @@ int main(int argc, char const *argv[]) {
       			if (extensions != NULL)
       			{
 	      			if(strcmp(extensions, ".png") == 0){
-	                    chdir(argv[1]);
-	                    char source_directory[100];
-	                    strcpy(source_directory,dir->d_name);
-	                    dir->d_name[strlen(dir->d_name)-4] = '\0';
-	                    strcat(dir->d_name,"_grey.png");
-	                    char destionation_directory[100] = "/home/fawwaz/modul2/gambar/";
-	                    strcat(destionation_directory,dir->d_name);
-	                    pid_t child_id;
-    					child_id = fork();
-	      				if (child_id != 0) {
-	                       char *argv[4] = {"mv", source_directory, destionation_directory, NULL};
-	                       execv("/bin/mv", argv);
-	                   }
+                if (dir->d_type == 8) {
+                  chdir(argv[1]);
+                  char source_directory[100];
+                  strcpy(source_directory,dir->d_name);
+                  dir->d_name[strlen(dir->d_name)-4] = '\0';
+                  strcat(dir->d_name,"_grey.png");
+                  char destionation_directory[100] = "/home/fawwaz/modul2/gambar/";
+                  strcat(destionation_directory,dir->d_name);
+                  pid_t child_id;
+                  child_id = fork();
+                  if (child_id != 0) {
+                    char *argv[4] = {"mv", source_directory, destionation_directory, NULL};
+                    execv("/bin/mv", argv);
+                  }
+                }
 	      			}
       			}           
         	}
@@ -84,7 +86,7 @@ int main(int argc, char const *argv[]) {
 	exit(EXIT_SUCCESS);
 }
 ```
-Program dijalankan dengan tambahan argumen, argumen tersebut adalah direktori file yang akan menjadi source, jika direktori itu ada makan akan masuk ke dalam kondisi if. Kemudian mengecek semua file yang berada dalam direktori source, setelah itu mendapatkan extensi file. Setelah mendapatkan extensi file dicek apakah file tersebut memiliki extensi .png jika iya maka nama file itu disimpan ke suatu variabel dan dihapus extensi filenya kemudian ditambahkan kata *_grey.png* diakhir nama file. setelah itu dipindahkan file tersebut menggunakan *exec()* yaitu mv, dengan sourcenya yaitu nama awal file dan destinasinya yaitu direktori *"/home/[user]/modul2/gambar"* diikuti dengan nama file yang baru yang tersimpan dalam variabel tadi.
+Program dijalankan dengan tambahan argumen, argumen tersebut adalah direktori file yang akan menjadi source, jika direktori itu ada makan akan masuk ke dalam kondisi if. Kemudian mengecek semua file yang berada dalam direktori source, setelah itu mendapatkan extensi file. Setelah mendapatkan extensi file dicek apakah file tersebut memiliki extensi .png dan apakah file tersebut adalah file bukan merupakan suatu direktori jika iya maka nama file itu disimpan ke suatu variabel dan dihapus extensi filenya kemudian ditambahkan kata *_grey.png* diakhir nama file. setelah itu dipindahkan file tersebut menggunakan *exec()* yaitu mv, dengan sourcenya yaitu nama awal file dan destinasinya yaitu direktori *"/home/[user]/modul2/gambar"* diikuti dengan nama file yang baru yang tersimpan dalam variabel tadi.
 
 ## Nomor 2
 ### Soal :
@@ -92,6 +94,89 @@ Pada suatu hari Kusuma dicampakkan oleh Elen karena Elen dimenangkan oleh orang 
 Catatan: Tidak boleh menggunakan crontab
 
 ### Jawaban :
+Menggunakan program [soal2.c](soal2/soal2.c). Isi dari program tersebut adalah
+```
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
+
+int main(int argc, char const *argv[])
+{
+	pid_t pid, sid;
+    pid = fork();
+    if(pid < 0)
+    {
+      exit(EXIT_FAILURE);
+    }
+    if(pid > 0)
+    {
+      exit(EXIT_SUCCESS);
+    }
+    umask(0);
+    sid = setsid();
+    if(sid < 0)
+    {
+      exit(EXIT_FAILURE);
+    }
+    if((chdir("/")) < 0)
+    {
+      exit(EXIT_FAILURE);
+    }
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+	DIR *d;
+    struct dirent *dir;
+    char directory[100];
+    strcpy(directory,argv[1]);
+    strcat(directory,"/hatiku");
+  	char *file = "elen.ku";
+    while(1)
+    {
+		d = opendir(directory);
+		if(d){
+			while ((dir = readdir(d)) != NULL){
+				if ( strcmp(dir->d_name,".")!=0 && strcmp(dir->d_name,"..")!=0 )
+				{	
+					if(strcmp(dir->d_name, file)==0)
+					{
+						chdir(directory);
+						struct stat sb;
+					    char outstr[200];
+					    stat(file, &sb);
+					    struct passwd *pw = getpwuid(sb.st_uid);
+					    struct group  *gr = getgrgid(sb.st_gid);
+					    
+				    	chmod(file,0777);
+					    if (strcmp(pw->pw_name,"www-data") == 0 && strcmp(gr->gr_name, "www-data") == 0)
+					    {
+					    	stat(file, &sb);
+					    	int statchmod = sb.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+							snprintf(outstr, sizeof(outstr), "%o", statchmod);
+					    	if(strcmp(outstr,"777")==0){
+					    		remove(file);
+					    	}
+					    }
+					}
+				}
+			}
+			closedir(d);
+
+		}
+		sleep(3);
+	}
+	exit(EXIT_SUCCESS);
+}
+```
+Pertama-tama jalankan program dari *soal2.c* menggunakan parameter *fullpath* letak direktori *hatiku*. Setelah itu mengecek semua file di direktori *hatiku* jika menemukan file bernama *elen.ku* maka permissionnya diganti 777 setelah itu mendapatkan user owner dan groupnya. Jika user owner dan groupnya adalah "*www-data*" maka file tersebut akan dihapus.
 
 
 ## Nomor 3

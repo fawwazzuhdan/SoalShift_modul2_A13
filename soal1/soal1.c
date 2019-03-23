@@ -35,6 +35,10 @@ int main(int argc, char const *argv[]) {
     close(STDERR_FILENO);
     DIR *d;
     struct dirent *dir;
+    // struct stat st;
+    // {
+        
+    // };
     while(1)
     {
     	d = opendir(argv[1]);
@@ -46,19 +50,21 @@ int main(int argc, char const *argv[]) {
       			if (extensions != NULL)
       			{
 	      			if(strcmp(extensions, ".png") == 0){
-	                    chdir(argv[1]);
-	                    char source_directory[100];
-	                    strcpy(source_directory,dir->d_name);
-	                    dir->d_name[strlen(dir->d_name)-4] = '\0';
-	                    strcat(dir->d_name,"_grey.png");
-	                    char destionation_directory[100] = "/home/fawwaz/modul2/gambar/";
-	                    strcat(destionation_directory,dir->d_name);
-	                    pid_t child_id;
-    					child_id = fork();
-	      				if (child_id != 0) {
-	                       char *argv[4] = {"mv", source_directory, destionation_directory, NULL};
-	                       execv("/bin/mv", argv);
-	                   }
+                        if (dir->d_type == 8) {
+    	                    chdir(argv[1]);
+    	                    char source_directory[100];
+    	                    strcpy(source_directory,dir->d_name);
+    	                    dir->d_name[strlen(dir->d_name)-4] = '\0';
+    	                    strcat(dir->d_name,"_grey.png");
+    	                    char destionation_directory[100] = "/home/fawwaz/modul2/gambar/";
+    	                    strcat(destionation_directory,dir->d_name);
+    	                    pid_t child_id;
+        					child_id = fork();
+    	      				if (child_id != 0) {
+    	                       char *argv[4] = {"mv", source_directory, destionation_directory, NULL};
+    	                       execv("/bin/mv", argv);
+	                       }
+                       }
 	      			}
       			}           
         	}
